@@ -5,6 +5,7 @@ use sqlx::FromRow;
 pub struct Usuario {
     pub id: String,
     pub name: String,
+    pub public_key: String
 }
 
 #[derive(Deserialize)]

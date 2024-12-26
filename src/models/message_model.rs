@@ -6,6 +6,7 @@ pub struct SendMessageRequest {
     pub sender_id: String,
     pub receiver_id: String,
     pub message: String,
+    pub public_key: String,
 }
 
 #[derive(Serialize,FromRow)]

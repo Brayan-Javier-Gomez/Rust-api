@@ -6,7 +6,8 @@ use actix_web::{web, HttpResponse, Responder};
 use sqlx::PgPool;
 
 pub async fn send_message(pool: web::Data<PgPool>, payload: web::Json<SendMessageRequest>) -> impl Responder {
-    match message_service::new_message(&pool, &payload.sender_id,&payload.receiver_id, &payload.message).await {
+    // let public_key_decoded = general_purpose::STANDARD.decode(public_key).expect("Error al decodificar la clave pública");
+    match message_service::new_message(&pool, &payload.sender_id,&payload.receiver_id, &payload.message, &payload.public_key).await {
         Ok(_) => HttpResponse::Created().json(serde_json::json!({"message": "Message send succesfully"})),
         Err(err) => {
             eprintln!("Error sending message: {:?}", err);

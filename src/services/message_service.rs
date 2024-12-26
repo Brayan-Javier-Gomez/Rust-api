@@ -1,7 +1,9 @@
+use base64::{engine::general_purpose, Engine};
+use openssl::rsa;
 use sqlx::PgPool;
 use std::result::Result;
 
-use crate::models::message_model::PendingMessage;
+use crate::{models::message_model::PendingMessage, tools::encription::{encode_base64, encrypt_message_with_openssl}};
 
 //Nuevo mensaje
 pub async fn new_message(
@@ -9,7 +11,12 @@ pub async fn new_message(
     sender_id: &str,
     receiver_id: &str,
     message: &str,
+    public_key: &String
 ) -> Result<(), String> {
+    let public_key_decoded = general_purpose::STANDARD.decode(public_key).map_err(|e| format!("Error al decodificar la clave pública desde DER: {}", e))?;
+    let public_key_decripted = rsa::Rsa::public_key_from_der(&public_key_decoded).map_err(|e| format!("Error al crear la clave pública desde DER: {}", e))?;
+    let encrypted_message = encrypt_message_with_openssl(public_key_decripted, message).map_err(|e| format!("Error al crear la clave pública desde DER: {}", e))?;
+    let encode_encrypted_message = encode_base64(&encrypted_message);
     let query = r#"
         INSERT INTO messages (sender_id, receiver_id, message, status)
         VALUES ($1, $2, $3, 'pending')
@@ -19,7 +26,7 @@ pub async fn new_message(
     sqlx::query(&query)
         .bind(&sender_id)
         .bind(&receiver_id)
-        .bind(&message)
+        .bind(&encode_encrypted_message)
         .execute(pool)
         .await
         .map_err(|err| match err {
@@ -41,6 +48,7 @@ pub async fn get_pending_messages(
     pool: &PgPool,
     receiver_id: String,
 ) -> Result<Vec<PendingMessage>, String> {
+
     let query = r#"
         SELECT id, sender_id, message, date
         FROM messages
